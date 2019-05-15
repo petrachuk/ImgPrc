@@ -1,0 +1,41 @@
+﻿@model TestPage.Models.ResultModel
+
+@{
+    ViewData["Title"] = "CompareResult";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h1>CompareResult</h1>
+<h2>aHash based</h2>
+<p>Time: @Model.TimeHash мс</p>
+<table>
+    <tr><td>Image 1:</td><td style="text-align: right">@Convert.ToString(Model.Img1Hash, 2).PadLeft(64, '0')</td></tr>
+    <tr><td>Image 2:</td><td tyle="text-align: right">@Convert.ToString(Model.Img2Hash, 2).PadLeft(64, '0')</td></tr>
+    <tr><td>XOR:</td><td style="text-align: right">@Model.DiffrenseHash.PadLeft(64, '0')</td></tr>
+    <tr><td>Hamming Distanse:</td><td style="text-align: right">@Model.HammingDistanseHash</td></tr>
+    <tr><td>Result:</td><td style="text-align: right">@Model.HashSummary</td></tr>
+</table>
+
+<h2>pHash based</h2>
+<p>Time: @Model.TimePHash мс</p>
+<table>
+    <tr><td>Image 1:</td><td style="text-align: right">@Convert.ToString(Model.Img1PHash, 2).PadLeft(64, '0')</td></tr>
+    <tr><td>Image 2:</td><td tyle="text-align: right">@Convert.ToString(Model.Img2PHash, 2).PadLeft(64, '0')</td></tr>
+    <tr><td>XOR:</td><td style="text-align: right">@Model.DiffrensePHash.PadLeft(64, '0')</td></tr>
+    <tr><td>Hamming Distanse:</td><td style="text-align: right">@Model.HammingDistansePHash</td></tr>
+    <tr><td>Result:</td><td style="text-align: right">@Model.PHashSummary</td></tr>
+</table>
+
+<h2>dHash based</h2>
+<p>Time: @Model.TimePHash мс</p>
+<table>
+    <tr><td>Image 1:</td><td style="text-align: right">@Convert.ToString(Model.Img1Magic, 2).PadLeft(64, '0')</td></tr>
+    <tr><td>Image 2:</td><td tyle="text-align: right">@Convert.ToString(Model.Img2Magic, 2).PadLeft(64, '0')</td></tr>
+    <tr><td>XOR:</td><td style="text-align: right">@Model.DiffrenseMagic.PadLeft(64, '0')</td></tr>
+    <tr><td>Hamming Distanse:</td><td style="text-align: right">@Model.HammingDistanseMagic</td></tr>
+    <tr><td>Result:</td><td style="text-align: right">@Model.MagicSummary</td></tr>
+</table>
+
+<br />
+
+@Html.ActionLink("Back", "Index")

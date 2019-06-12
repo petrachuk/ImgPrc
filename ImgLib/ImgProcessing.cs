@@ -8,6 +8,8 @@ namespace ImgLib
 {
     public class ImgProcessing : IDisposable
     {
+        private const int ResizeMethod = 2; // Простой
+
         private bool _disposed;
         private Mat _srcImg;
 
@@ -83,21 +85,19 @@ namespace ImgLib
         /// <returns></returns>
         public long AHash(Mat src)
         {
-            // Уменьшить размер
-            var smallImg = new Mat();
-            Cv2.Resize(src, smallImg, new Size(8, 8));
-
             // Убрать цвет
-            var smallGrayImg = new Mat();
-            Cv2.CvtColor(smallImg, smallGrayImg, ColorConversionCodes.BGR2GRAY);
-            smallImg.Dispose();
+            var grayImg = new Mat();
+            Cv2.CvtColor(src, grayImg, ColorConversionCodes.BGR2GRAY);
+
+            // Уменьшить размер
+            var smallImg = ResizeGrayImg(grayImg, 8, 8,ResizeMethod);
 
             // Найти среднее
-            var thresh = Cv2.Mean(smallGrayImg).Val0;
+            var thresh = Cv2.Mean(smallImg).Val0;
 
             // Цепочка битов
-            var bits = smallGrayImg.Threshold(thresh, 255, ThresholdTypes.Binary);
-            smallGrayImg.Dispose();
+            var bits = smallImg.Threshold(thresh, 255, ThresholdTypes.Binary);
+            smallImg.Dispose();
             
             return GetHash(bits, (byte)255);
         }
@@ -109,19 +109,19 @@ namespace ImgLib
         /// <returns></returns>
         public long PHash(Mat src)
         {
-            // Уменьшить размер
-            var smallImg = new Mat();
-            Cv2.Resize(src, smallImg, new Size(32, 32));
-
             // Убрать цвет
             var grayImg = new Mat();
-            Cv2.CvtColor(smallImg, grayImg, ColorConversionCodes.BGR2GRAY);
-            smallImg.Dispose();
+            Cv2.CvtColor(src, grayImg, ColorConversionCodes.BGR2GRAY);
+            // src.Dispose();
+
+            // Уменьшить размер
+            var smallImg = ResizeGrayImg(grayImg, 32, 32, ResizeMethod);
+            grayImg.Dispose();
 
             // Запустить дискретное косинусное преобразование
             var prepImg = new Mat();
-            grayImg.ConvertTo(prepImg, MatType.CV_32FC1, 1.0/255.0);
-            grayImg.Dispose();
+            smallImg.ConvertTo(prepImg, MatType.CV_32FC1, 1.0/255.0);
+            smallImg.Dispose();
 
             var dctImg = new Mat();
             Cv2.Dct(prepImg, dctImg);
@@ -155,27 +155,25 @@ namespace ImgLib
         /// <returns></returns>
         public long DHash(Mat src)
         {
-            // Уменьшить размер
-            var smallImg = new Mat();
-            Cv2.Resize(src, smallImg, new Size(9, 8));
-
             // Убрать цвет
-            var smallGrayImg = new Mat();
-            Cv2.CvtColor(smallImg, smallGrayImg, ColorConversionCodes.BGR2GRAY);
-            smallImg.Dispose();
+            var grayImg = new Mat();
+            Cv2.CvtColor(src, grayImg, ColorConversionCodes.BGR2GRAY);
+
+            // Уменьшить размер
+            var smallImg = ResizeGrayImg(grayImg, 9, 8, ResizeMethod);
 
             var bitChain = string.Empty;
 
             for (var j = 0; j < 8; j++)
             for (var i = 0; i < 8; i++)
             {
-                if (smallGrayImg.At<byte>(j, i) > smallGrayImg.At<byte>(j, i + 1))
+                if (smallImg.At<byte>(j, i) > smallImg.At<byte>(j, i + 1))
                     bitChain += "1";
                 else
                     bitChain += "0";
             }
 
-            smallGrayImg.Dispose();
+            smallImg.Dispose();
 
             var bits =  Convert.ToInt64(bitChain, 2);
             Console.WriteLine(bits);
@@ -306,6 +304,47 @@ namespace ImgLib
                 exit_x1:
 
                 return new Mat(_srcImg, new Range(newY0, newY1), new Range(newX0, newX1));
+            }
+        }
+
+        /// <summary>
+        /// Изменение размера изображения в оттенках серого
+        /// </summary>
+        /// <param name="grayImg">Mat-источник</param>
+        /// <param name="newDimX">Размерность по горизонтали</param>
+        /// <param name="newDimY">Размерность по вертикали</param>
+        /// <param name="mode">1 - Нормальный режим, 2 - простой</param>
+        /// <returns></returns>
+        private static Mat ResizeGrayImg(Mat grayImg, int newDimX, int newDimY, int mode)
+        {
+            if (mode == 2)
+            {
+                var blockX = (int)Math.Round(1.0 * grayImg.Width / newDimX);
+                var blockY = (int)Math.Round(1.0 * grayImg.Height / newDimY);
+
+                var tmp = new byte[newDimY, newDimX];
+            
+                for (var j = 0; j < newDimY; j++)
+                for (var i = 0; i < newDimX; i++)
+                {
+                    var sum = 0.0;
+
+                    for (var y = j * blockY; y < ((j+1) * blockY) - 1; y++)
+                    for (var x = i * blockX; x < ((i+1) * blockX) - 1; x++)
+                    {
+                        sum += grayImg.At<byte>(y, x);
+                    }
+
+                    tmp[j, i] = (byte)Math.Round(sum / (blockX * blockY));
+                }
+
+                return new Mat(newDimY, newDimX, MatType.CV_8UC1, tmp);
+            }
+            else
+            {
+                var smallImg = new Mat();
+                Cv2.Resize(grayImg, smallImg, new Size(newDimX, newDimY));
+                return smallImg;
             }
         }
 

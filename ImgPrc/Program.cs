@@ -5,7 +5,7 @@ namespace ImgPrc
 {
     internal class Program
     {
-        private static void Main(string[] args)
+        private static void Main()
         {
             const Mode mode = Mode.CropPHash;
 

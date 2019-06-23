@@ -1,4 +1,8 @@
-﻿namespace ImgLib
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace ImgLib
 {
     public enum Mode
     {
@@ -10,3 +14,4 @@
         CropDHash
     }
 }
+

@@ -178,7 +178,7 @@ namespace ImgLib
             var bits =  Convert.ToInt64(bitChain, 2);
             Console.WriteLine(bits);
 
-            return Convert.ToInt64(bitChain, 2);;
+            return Convert.ToInt64(bitChain, 2);
         }
 
         /// <summary>

@@ -85,21 +85,24 @@ namespace ImgLib
         /// <returns></returns>
         public long AHash(Mat src)
         {
-            // Убрать цвет
-            var grayImg = new Mat();
-            Cv2.CvtColor(src, grayImg, ColorConversionCodes.BGR2GRAY);
+            using (var grayImg = new Mat())
+            {
+                // Убрать цвет
+                Cv2.CvtColor(src, grayImg, ColorConversionCodes.BGR2GRAY);
 
-            // Уменьшить размер
-            var smallImg = ResizeGrayImg(grayImg, 8, 8,ResizeMethod);
+                // Уменьшить размер
+                using (var smallImg = ResizeGrayImg(grayImg, 8, 8, ResizeMethod))
+                {
+                    // Найти среднее
+                    var thresh = Cv2.Mean(smallImg).Val0;
 
-            // Найти среднее
-            var thresh = Cv2.Mean(smallImg).Val0;
-
-            // Цепочка битов
-            var bits = smallImg.Threshold(thresh, 255, ThresholdTypes.Binary);
-            smallImg.Dispose();
-            
-            return GetHash(bits, (byte)255);
+                    // Цепочка битов
+                    using (var bits = smallImg.Threshold(thresh, 255, ThresholdTypes.Binary))
+                    {
+                        return GetHash(bits, (byte) 255);
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -109,43 +112,48 @@ namespace ImgLib
         /// <returns></returns>
         public long PHash(Mat src)
         {
-            // Убрать цвет
-            var grayImg = new Mat();
-            Cv2.CvtColor(src, grayImg, ColorConversionCodes.BGR2GRAY);
-            // src.Dispose();
-
-            // Уменьшить размер
-            var smallImg = ResizeGrayImg(grayImg, 32, 32, ResizeMethod);
-            grayImg.Dispose();
-
-            // Запустить дискретное косинусное преобразование
-            var prepImg = new Mat();
-            smallImg.ConvertTo(prepImg, MatType.CV_32FC1, 1.0/255.0);
-            smallImg.Dispose();
-
-            var dctImg = new Mat();
-            Cv2.Dct(prepImg, dctImg);
-            prepImg.Dispose();
-
-            // Сократить DCT
-            var shortDct = new Mat(dctImg, new Range(0, 8), new Range(0, 8));
-            dctImg.Dispose();
-
-            // Вычислить среднее значение
-            double avg = 0;
-            for(var j = 0; j < 8; j++)
-            for (var i = 0; i < 8; i++)
+            using (var grayImg = new Mat())
             {
-                if (j == 0 && j == 0) continue;
-                avg += shortDct.At<float>(j, i);
+                // Убрать цвет
+                Cv2.CvtColor(src, grayImg, ColorConversionCodes.BGR2GRAY);
+
+                // Уменьшить размер
+                using (var smallImg = ResizeGrayImg(grayImg, 32, 32, ResizeMethod))
+                {
+                    using (var prepImg = new Mat())
+                    {
+                        // Преобразуем к нужному типу
+                        smallImg.ConvertTo(prepImg, MatType.CV_32FC1, 1.0 / 255.0);
+
+                        using (var dctImg = new Mat())
+                        {
+                            // Запустить дискретное косинусное преобразование
+                            Cv2.Dct(prepImg, dctImg);
+
+                            // Сократить DCT
+                            using (var shortDct = new Mat(dctImg, new Range(0, 8), new Range(0, 8)))
+                            {
+                                // Вычислить среднее значение
+                                double avg = 0;
+                                for (var j = 0; j < 8; j++)
+                                for (var i = 0; i < 8; i++)
+                                {
+                                    if (j == 0 && j == 0) continue;
+                                    avg += shortDct.At<float>(j, i);
+                                }
+
+                                var thresh = avg / 63.0;
+
+                                // Ещё сократить DCT
+                                using (var bits = shortDct.Threshold(thresh, 255, ThresholdTypes.Binary))
+                                {
+                                    return GetHash(bits, (float) 255);
+                                }
+                            }
+                        }
+                    }
+                }
             }
-            var thresh = avg / 63.0;
-
-            // Ещё сократить DCT
-            var bits = shortDct.Threshold(thresh, 255, ThresholdTypes.Binary);
-            shortDct.Dispose();
-
-            return GetHash(bits, (float)255);
         }
 
         /// <summary>
@@ -155,28 +163,26 @@ namespace ImgLib
         /// <returns></returns>
         public long DHash(Mat src)
         {
-            // Убрать цвет
-            var grayImg = new Mat();
-            Cv2.CvtColor(src, grayImg, ColorConversionCodes.BGR2GRAY);
-
-            // Уменьшить размер
-            var smallImg = ResizeGrayImg(grayImg, 9, 8, ResizeMethod);
-
             var bitChain = string.Empty;
 
-            for (var j = 0; j < 8; j++)
-            for (var i = 0; i < 8; i++)
+            using (var grayImg = new Mat())
             {
-                if (smallImg.At<byte>(j, i) > smallImg.At<byte>(j, i + 1))
-                    bitChain += "1";
-                else
-                    bitChain += "0";
+                // Убрать цвет
+                Cv2.CvtColor(src, grayImg, ColorConversionCodes.BGR2GRAY);
+
+                // Уменьшить размер
+                using (var smallImg = ResizeGrayImg(grayImg, 9, 8, ResizeMethod))
+                {
+                    for (var j = 0; j < 8; j++)
+                    for (var i = 0; i < 8; i++)
+                    {
+                        if (smallImg.At<byte>(j, i) > smallImg.At<byte>(j, i + 1))
+                            bitChain += "1";
+                        else
+                            bitChain += "0";
+                    }
+                }
             }
-
-            smallImg.Dispose();
-
-            var bits =  Convert.ToInt64(bitChain, 2);
-            Console.WriteLine(bits);
 
             return Convert.ToInt64(bitChain, 2);
         }

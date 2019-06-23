@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using ImgLib;
 using Microsoft.AspNetCore.Http;
@@ -24,22 +21,22 @@ namespace TestPage.Controllers
         {
             var sw = Stopwatch.StartNew();
             var result = new ResultModel();
-            var first = true;
+            var firstFile = true;
 
             foreach (var formFile in files)
             {
-                if (formFile.Length > 0)
+                if (formFile.Length <= 0) continue;
+
+                var filePath = Path.GetTempFileName();
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
                 {
-                    var filePath = Path.GetTempFileName();
+                    await formFile.CopyToAsync(stream);
+                }
 
-                    using (var stream = new FileStream(filePath, FileMode.Create))
-                    {
-                        await formFile.CopyToAsync(stream);
-                    }
-
-                    var img = new ImgProcessing(filePath);
-
-                    if (first)
+                using (var img = new ImgProcessing(filePath))
+                {
+                    if (firstFile)
                     {
                         sw.Start();
                         result.Img1Hash = img.Processing(Mode.CropAHash);
@@ -56,7 +53,7 @@ namespace TestPage.Controllers
                         sw.Stop();
                         result.TimeMagic += sw.ElapsedMilliseconds;
 
-                        first = false;
+                        firstFile = false;
                     }
                     else
                     {
@@ -75,10 +72,10 @@ namespace TestPage.Controllers
                         sw.Stop();
                         result.TimeMagic += sw.ElapsedMilliseconds;
                     }
-
-                    var file = new FileInfo(filePath);
-                    file.Delete();
                 }
+
+                var file = new FileInfo(filePath);
+                file.Delete();
             }
 
             return View("Results", result);
